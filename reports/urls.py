@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path("orm-report/", views.sales_report_orm),
+    path("product-ranking/", views.product_ranking_orm),
     path("raw-report/", views.sales_report_raw),
     path("summary/", views.sales_summary_cursor),
     path("bulk-update/", views.bulk_update_status),

@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-reports}
+      POSTGRES_USER: ${POSTGRES_USER:-reports}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reports}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DATABASE_ENGINE: django.db.backends.postgresql
+      POSTGRES_DB: ${POSTGRES_DB:-reports}
+      POSTGRES_USER: ${POSTGRES_USER:-reports}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reports}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-admin@example.com}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-admin12345}
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  postgres_data:

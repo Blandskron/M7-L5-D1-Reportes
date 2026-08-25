@@ -1,125 +1,66 @@
-# Motor de Reportes de Ventas (ORM + SQL) — Tutorial Paso a Paso
+# Aula de consultas Django: ORM, SQL y PostgreSQL
 
-## 1) Crear entorno virtual
+Proyecto educativo: una tienda filtra ventas, calcula indicadores y realiza operaciones administrativas con ORM y SQL directo. Funciona con SQLite local y PostgreSQL mediante Docker.
+
+## Resultados de aprendizaje cubiertos
+
+| Requisito | Implementación |
+| --- | --- |
+| 5.1 ORM con filtros | `orm-report/`: `filter`, `Q`, rangos, `exclude`, `select_related` y `defer` |
+| ORM personalizado | `product-ranking/`: `values`, `annotate`, `Count` y `Sum` |
+| Índices | índices sobre email, nombre, precio, fecha y estado en modelos |
+| 5.2 SQL recuperación | `raw-report/`: `raw()` parametrizado y mapeado a `Sale`; `summary/`: cursor |
+| 5.3 SQL CRUD | `insert-sql/` (CREATE), `bulk-update/` (UPDATE), `cleanup/` (DELETE) |
+| Procedimiento almacenado | `call-procedure/`, migración `0002` para PostgreSQL |
+
+El SQL siempre usa placeholders `%s` y parámetros separados: no concatena entrada de usuario.
+
+## Docker (recomendado)
+
 ```bash
-python -m venv venv
-venv\Scripts\activate
-````
-
-## 2) Instalar Django
-
-```bash
-python -m pip install --upgrade pip
-pip install django
+docker compose up --build
 ```
 
-## 3) Crear proyecto Django
+Disponible en `http://localhost:8000`; administrador en `/admin/`. El arranque aplica migraciones y crea el superusuario inicial `admin` / `admin12345`. Cambia esas variables antes de desplegar:
 
 ```bash
-django-admin startproject config .
+DJANGO_SUPERUSER_USERNAME=profesor
+DJANGO_SUPERUSER_EMAIL=profesor@example.com
+DJANGO_SUPERUSER_PASSWORD=una-clave-segura
 ```
 
-## 4) Crear app `reports`
+Puedes partir copiando `.env.example` a `.env`; el archivo `.env` no se versiona.
+
+Carga datos demostrativos:
 
 ```bash
-python manage.py startapp reports
+docker compose exec web python manage.py seed_data
 ```
 
-## 5) Copiar archivos del proyecto
-
-Copia y pega estos archivos en tu proyecto (reemplazando los existentes si aplica):
-
-* `reports/models.py`
-* `reports/admin.py`
-* `reports/views.py`
-* `reports/urls.py`
-* `config/urls.py`
-
-Y crea el seeder:
-
-* `reports/management/__init__.py`
-* `reports/management/commands/__init__.py`
-* `reports/management/commands/seed_data.py`
-
-## 6) Registrar la app en `settings.py`
-
-En `config/settings.py` agrega:
-
-```python
-INSTALLED_APPS = [
-    ...
-    "reports",
-]
-```
-
-## 7) Crear y aplicar migraciones
+## Local
 
 ```bash
-python manage.py makemigrations
-python manage.py makemigrations reports
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
 python manage.py migrate
-```
-
-## 8) Crear superusuario (para entrar al admin)
-
-```bash
-python manage.py createsuperuser
-```
-
-## 9) Llenar la base de datos con mucha información
-
-```bash
 python manage.py seed_data
-```
-
-Datos masivos:
-
-```bash
-python manage.py seed_data --customers 1000 --products 500 --sales 20000
-```
-
-## 10) Levantar el servidor
-
-```bash
 python manage.py runserver
 ```
 
-## 11) Probar endpoints (en el navegador)
+Sin configuración PostgreSQL se utiliza SQLite. El procedimiento almacenado se demuestra únicamente con PostgreSQL/Docker.
 
-### Reporte ORM (filtros)
+## Endpoints
 
-* `http://127.0.0.1:8000/api/reports/orm-report/`
+| Método | Ruta | Cuerpo o filtro |
+| --- | --- | --- |
+| GET | `/api/reports/orm-report/` | `?status=PAID&search=Cliente&start_date=2026-01-01T00:00:00Z` |
+| GET | `/api/reports/product-ranking/` | anotaciones ORM |
+| GET | `/api/reports/raw-report/` | `?status=PAID` |
+| GET | `/api/reports/summary/` | resumen SQL con cursor |
+| POST | `/api/reports/insert-sql/` | `{"customer_id":1,"product_id":1,"quantity":2}` |
+| POST | `/api/reports/bulk-update/` | `{"from_status":"PENDING","to_status":"PAID"}` |
+| POST | `/api/reports/cleanup/` | `{"confirm":true}` |
+| POST | `/api/reports/call-procedure/` | `{"customer_id":1}` |
 
-Ejemplo con filtros:
-
-* `http://127.0.0.1:8000/api/reports/orm-report/?status=PAID`
-* `http://127.0.0.1:8000/api/reports/orm-report/?search=Cliente`
-* `http://127.0.0.1:8000/api/reports/orm-report/?start_date=2026-01-01T00:00:00&end_date=2026-12-31T23:59:59`
-
-### Reporte SQL RAW
-
-* `http://127.0.0.1:8000/api/reports/raw-report/?status=PAID`
-
-### Resumen con cursor SQL
-
-* `http://127.0.0.1:8000/api/reports/summary/`
-
-### CRUD por SQL directo
-
-* Bulk update (PENDING -> PAID):
-
-  * `http://127.0.0.1:8000/api/reports/bulk-update/`
-* Borrar CANCELLED:
-
-  * `http://127.0.0.1:8000/api/reports/cleanup/`
-* Insert por SQL:
-
-  * `http://127.0.0.1:8000/api/reports/insert-sql/`
-
-### Procedimiento almacenado (si existe en tu BD)
-
-* `http://127.0.0.1:8000/api/reports/call-procedure/`
-
-## 12) Admin Django
-
-* `http://127.0.0.1:8000/admin/`
+Las mutaciones requieren POST. Revisa [curls.sh](curls.sh) para ejemplos ejecutables.
